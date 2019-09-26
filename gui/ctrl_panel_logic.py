@@ -1,6 +1,9 @@
 import cgitb
 import signal
 import sys
+import os
+import time
+from concurrent import futures
 
 from PyQt5.QtGui import QCursor
 
@@ -8,7 +11,7 @@ cgitb.enable()  # Enable hidden errors and warnings, especially important for wi
 import setproctitle
 
 setproctitle.setproctitle('polyplayer')
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QStyle, QStyleFactory
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QStyle, QStyleFactory, QLineEdit, QListView
 from PyQt5.QtCore import QThread, Qt
 from PyQt5 import QtGui, QtCore
 
@@ -19,6 +22,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setupUi(self)
+
+        # setup threadpool for logics
+        threadpool = futures.ThreadPoolExecutor(16)
 
         # frameless
         self.setWindowFlags(Qt.FramelessWindowHint)
@@ -36,10 +42,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # global search thread
         self.global_search_thread = TextEditThread(self.global_search, self.search_online)
         self.global_search_thread.start()
-        self.global_search_last_text = ''
+
+        # set playlist unit width
 
     def search_online(self):
-        print(self.global_search.text())
+        text = self.global_search.text()
+        os.popen('')
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -66,3 +74,4 @@ class TextEditThread(QThread):
 
     def run(self):
         self.text_edit_widget.textChanged.connect(self.target_func)
+

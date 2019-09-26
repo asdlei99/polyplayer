@@ -126,7 +126,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_download_2">
+         <widget class="QPushButton" name="pushButton_remove">
           <property name="text">
            <string>Remove</string>
           </property>
@@ -135,7 +135,7 @@
        </layout>
       </item>
       <item>
-       <widget class="QTableWidget" name="tableWidget">
+       <widget class="QTableWidget" name="playlist">
         <property name="font">
          <font>
           <family>Calibri</family>
@@ -267,7 +267,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QSlider" name="horizontalSlider_play_progress">
+         <widget class="QSlider" name="horizontalSlider_current_play_time_slider">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
@@ -300,14 +300,14 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton">
+         <widget class="QPushButton" name="pushButton_mute">
           <property name="text">
            <string>Mute</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QSlider" name="horizontalSlider">
+         <widget class="QSlider" name="horizontalSlider_volume">
           <property name="value">
            <number>49</number>
           </property>
@@ -330,7 +330,7 @@
          </spacer>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_2">
+         <widget class="QPushButton" name="pushButton_playmode">
           <property name="text">
            <string>Mode</string>
           </property>
