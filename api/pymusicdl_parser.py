@@ -7,6 +7,7 @@ from music_dl.source import MusicSource
 
 from log import log
 
+
 class MusicDL:
     def __init__(self, download_dir='downloads/', lyrics=True, cover=True):
         self.ms = MusicSource()
@@ -34,12 +35,18 @@ class MusicDL:
             log.error('music sources type error.')
             raise ValueError
 
+        log.info('searching {} from sources: {}'.format(keyword, sources))
         self.song_list = self.ms.search(keyword, sources)
         return self.song_list
 
-    def download(self, idx):
-        song = self.song_list[idx]
+    def download(self, idx_or_song):
+        if isinstance(idx_or_song, int):
+            song = self.song_list[idx_or_song]
+        else:
+            song = idx_or_song
         song.download_song = types.MethodType(download_song, song)  # replace method
+        song.download_lyrics = types.MethodType(download_lyrics, song)  # replace method
+        song.download_cover = types.MethodType(download_cover, song)  # replace method
         song.download()
 
 
@@ -47,18 +54,23 @@ def download_song(self):
     if self.song_url:
         download_file(self.song_url, self.song_fullname, stream=True)
 
-    if self.lyrics_url and config.get('lyrics'):
-        self._download_file(self.lyrics_url, self.lyrics_fullname, stream=False)
 
+def download_lyrics(self):
+    if self.lyrics_url and config.get('lyrics'):
+        download_file(self.lyrics_url, self.lyrics_fullname, stream=False)
+
+
+def download_cover(self):
     if self.cover_url and config.get('cover'):
-        self._download_file(self.cover_url, self.cover_fullname, stream=False)
+        download_file(self.cover_url, self.cover_fullname, stream=False)
 
 
 def download_file(url, output_path, stream=True):
     if not url:
-        log.error("URL is empty.")
+        log.error("URL is empty")
         return
     try:
+        log.info('downloading ' + os.path.basename(output_path))
         r = requests.get(
             url,
             stream=stream,
@@ -77,6 +89,8 @@ def download_file(url, output_path, stream=True):
             with open(output_path, "wb") as f:
                 f.write(r.content)
                 f.close()
+
+        log.info(os.path.basename(output_path) + ' is downloaded')
     except Exception as e:
         log.error(e)
 
