@@ -60,6 +60,9 @@
           <property name="maxLength">
            <number>32</number>
           </property>
+          <property name="dragEnabled">
+           <bool>true</bool>
+          </property>
           <property name="placeholderText">
            <string>I'm feeling lucky...</string>
           </property>
@@ -79,12 +82,7 @@
           </item>
           <item>
            <property name="text">
-            <string>qqmusic</string>
-           </property>
-          </item>
-          <item>
-           <property name="text">
-            <string>xiami</string>
+            <string>qq</string>
            </property>
           </item>
           <item>
@@ -147,11 +145,23 @@
         <property name="tabletTracking">
          <bool>true</bool>
         </property>
+        <property name="editTriggers">
+         <set>QAbstractItemView::NoEditTriggers</set>
+        </property>
+        <attribute name="horizontalHeaderVisible">
+         <bool>true</bool>
+        </attribute>
         <attribute name="horizontalHeaderCascadingSectionResizes">
          <bool>true</bool>
         </attribute>
+        <attribute name="horizontalHeaderMinimumSectionSize">
+         <number>36</number>
+        </attribute>
         <attribute name="horizontalHeaderDefaultSectionSize">
          <number>120</number>
+        </attribute>
+        <attribute name="horizontalHeaderHighlightSections">
+         <bool>true</bool>
         </attribute>
         <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
          <bool>true</bool>
@@ -160,7 +170,7 @@
          <bool>true</bool>
         </attribute>
         <attribute name="verticalHeaderVisible">
-         <bool>false</bool>
+         <bool>true</bool>
         </attribute>
         <attribute name="verticalHeaderCascadingSectionResizes">
          <bool>true</bool>
@@ -169,26 +179,19 @@
          <number>30</number>
         </attribute>
         <attribute name="verticalHeaderShowSortIndicator" stdset="0">
-         <bool>true</bool>
+         <bool>false</bool>
         </attribute>
-        <row>
-         <property name="text">
-          <string>1</string>
-         </property>
-        </row>
-        <row>
-         <property name="text">
-          <string>2</string>
-         </property>
-        </row>
-        <row>
-         <property name="text">
-          <string>3</string>
-         </property>
-        </row>
+        <attribute name="verticalHeaderStretchLastSection">
+         <bool>false</bool>
+        </attribute>
         <column>
          <property name="text">
-          <string>Index</string>
+          <string>Added</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Downloaded</string>
          </property>
         </column>
         <column>
@@ -251,6 +254,9 @@
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Minimum</enum>
+          </property>
           <property name="sizeHint" stdset="0">
            <size>
             <width>40</width>
@@ -291,6 +297,9 @@
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Minimum</enum>
+          </property>
           <property name="sizeHint" stdset="0">
            <size>
             <width>40</width>
@@ -308,6 +317,12 @@
         </item>
         <item>
          <widget class="QSlider" name="horizontalSlider_volume">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="value">
            <number>49</number>
           </property>
@@ -320,6 +335,9 @@
          <spacer name="horizontalSpacer_3">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Minimum</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
