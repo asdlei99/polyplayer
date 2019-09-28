@@ -236,6 +236,16 @@
          </widget>
         </item>
         <item>
+         <widget class="QCheckBox" name="checkBox">
+          <property name="text">
+           <string>CheckBox</string>
+          </property>
+          <property name="icon">
+           <iconset theme="ico.ico"/>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="pushButton_play">
           <property name="text">
            <string>Play</string>

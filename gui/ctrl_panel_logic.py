@@ -6,6 +6,7 @@ import os
 import time
 import traceback
 from concurrent import futures
+from multiprocessing import Pool
 
 from PyQt5.QtGui import QCursor
 
@@ -58,15 +59,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         icon.addPixmap(QtGui.QPixmap("ico.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.setWindowIcon(icon)
 
-        # set playlist unit width
+        # ready music download engine
+        self.mdl = MusicDL()
+        self.song_list = []
+
+        # TODO: set playlist unit width
 
         # setup pools for logics
         self.search_thread = SearchThread(self)
         self.search_thread.start()
 
         # global search thread
-        self.global_search_thread = TextEditThread(self.global_search, self.search_thread.run)
+        self.global_search_thread = TextEditThread(self.global_search,
+                                                   self.search_thread.run)
         self.global_search_thread.start()
+
+        # download button thread
+        self.download_thread = DownloadThread(self)
+        self.download_thread.start()
+        self.download_button_thread = ButtonThread(self.pushButton_download,
+                                                   self.download_thread.run)
+        self.download_button_thread.start()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -85,20 +98,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setCursor(QCursor(Qt.ArrowCursor))
 
 
-class TextEditThread(QThread):
-    def __init__(self, text_edit_widget, target_func):
+class BaseQThread(QThread):
+    def __init__(self, widget, target_func):
         super(QThread, self).__init__()
-        self.text_edit_widget = text_edit_widget
+        self.widget = widget
         self.target_func = target_func
 
+    def run(self):
+        pass
+
+
+class ButtonThread(BaseQThread):
+    def __init__(self, widget, target_func):
+        super().__init__(widget, target_func)
+
+    def run(self):
+        self.widget.clicked.connect(self.target_func)
+
+
+class TextEditThread(BaseQThread):
+    def __init__(self, widget, target_func):
+        super().__init__(widget, target_func)
         self.text_edit_delay = DelayedExecutionTimer(max_delay=2000, min_delay=500)
 
     def run(self):
-        self.text_edit_widget.textChanged.connect(self.text_edit_delay.trigger)
+        self.widget.textChanged.connect(self.text_edit_delay.trigger)
         self.text_edit_delay.triggered.connect(self.target_func)
 
         # setup key press trigger too
-        self.text_edit_widget.returnPressed.connect(self.target_func)
+        self.widget.returnPressed.connect(self.target_func)
 
 
 class SearchThread(QThread):
@@ -106,9 +134,6 @@ class SearchThread(QThread):
         super(QThread, self).__init__()
         self.main_window = main_window
         self.pool = futures.ThreadPoolExecutor(16)
-
-        # ready music download engine
-        self.mdl = MusicDL()
 
     def run(self):
         self.pool.submit(self.proc)
@@ -120,30 +145,50 @@ class SearchThread(QThread):
         if not keyword:
             return
 
-        log.info('searching {} from {}'.format(keyword, sources))
-
         try:
-            song_list = self.mdl.search(keyword, sources)
+            self.main_window.song_list = self.main_window.mdl.search(keyword, sources)
         except Exception as e:
             tb = traceback.format_exc()
             log.error(e)
             log.error(tb)
             return
 
-        self.main_window.playlist.setRowCount(len(song_list))
+        self.main_window.playlist.setRowCount(len(self.main_window.song_list))
 
         # fill cells
-        for i, song in enumerate(song_list):
-            data = {'title': song.title,
-                    'artist': song.singer,
-                    'album': song.album,
-                    'duration': song.duration,
-                    'filesize': str(song.size) + 'MB',
-                    'source': song.source}
+        for i, song in enumerate(self.main_window.song_list):
+            # TODO: add widget on table
+
+            # data display
+            data = {
+                'title': song.title,
+                'artist': song.singer,
+                'album': song.album,
+                'duration': song.duration,
+                'filesize': str(song.size) + 'MB',
+                'source': song.source
+            }
 
             for header in data:
                 self.main_window.playlist.setItem(i, header_list.index(header),
                                                   QTableWidgetItem(str(data[header])))
+
+
+class DownloadThread(QThread):
+    def __init__(self, main_window):
+        super(QThread, self).__init__()
+        self.main_window = main_window
+        self.pool = futures.ThreadPoolExecutor(os.cpu_count())
+
+    def run(self):
+        current_row = self.main_window.playlist.currentRow()
+        if current_row < 0:
+            return
+
+        print(current_row, type(current_row))
+        if current_row < len(self.main_window.song_list):
+            self.pool.submit(self.main_window.mdl.download,
+                             self.main_window.song_list[current_row])
 
 
 class DelayedExecutionTimer(QtCore.QObject):
