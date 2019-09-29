@@ -66,6 +66,8 @@ def download_cover(self):
 
 
 def download_file(url, output_path, stream=True):
+    output_dir = os.path.dirname(output_path)
+    os.makedirs(output_dir, exist_ok=True)
     if not url:
         log.error("URL is empty")
         return
@@ -78,7 +80,7 @@ def download_file(url, output_path, stream=True):
             proxies=config.get("proxies"),
         )
         if stream:
-            # implement cache playing later
+            # TODO: implement cache playing later
             total_size = int(r.headers["content-length"])
             with open(output_path, "wb") as f:
                 for chunk in r.iter_content(chunk_size=1024):
