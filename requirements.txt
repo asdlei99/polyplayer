@@ -1,2 +1,4 @@
 pymusic-dl
 setproctitle
+pydub
+pyaudio

@@ -5,6 +5,7 @@ import sys
 import os
 import time
 import traceback
+from collections import OrderedDict
 from concurrent import futures
 from multiprocessing import Pool
 
@@ -21,24 +22,25 @@ if 'nt' in os.name:
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("polyplayer")
 
 from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QStyle, QStyleFactory, QLineEdit, QListView, \
-    QWidget, QTableWidgetItem, QCheckBox
-from PyQt5.QtCore import QThread, Qt
+    QWidget, QTableWidgetItem, QCheckBox, QComboBox
+from PyQt5.QtCore import QThread, Qt, pyqtSignal
 from PyQt5 import QtGui, QtCore
 
 from gui.ctrl_panel import Ui_MainWindow
 from api.pymusicdl_parser import MusicDL
-from log import log
+from api.audio_player import AudioPlayer
+from utils.logger import log
 
-header_list = [
-    'added',
-    'downloaded',
-    'title',
-    'artist',
-    'album',
-    'duration',
-    'filesize',
-    'source',
-]
+header_dict = {
+    'added': 36,
+    'downloaded': 36,
+    'title': 360,
+    'artist': 120,
+    'album': 120,
+    'duration': 80,
+    'filesize': 80,
+    'source': 80,
+}
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -63,10 +65,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.mdl = MusicDL()
         self.song_list = []
 
-        # TODO: set playlist unit width
+        # set table width
+        for i, header in enumerate(header_dict):
+            self.playlist.setColumnWidth(i, header_dict[header])
+
+        # set table click event
+        self.playlist.viewport().installEventFilter(self)
 
         # setup pools for logics
         self.search_thread = SearchThread(self)
+        self.search_thread.trigger.connect(self._set_table_button)
         self.search_thread.start()
 
         # global search thread
@@ -80,6 +88,49 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.download_button_thread = ButtonThread(self.pushButton_download,
                                                    self.download_thread.run)
         self.download_button_thread.start()
+
+        # set audio player
+        self.current_music_file_path = None
+        self.last_music_file_path = None
+        self.audio_player = None
+        self.is_playing = False
+        self.pushButton_play.clicked.connect(self.play)
+
+    def play(self, start_at=0):
+        if self.current_music_file_path != self.last_music_file_path:
+            if isinstance(self.audio_player, AudioPlayer):
+                self.audio_player.stop()
+                self.audio_player = None
+            else:
+                self.audio_player = None
+        else:
+            self.audio_player.pause()
+            return
+
+        if self.audio_player is None:
+            self.audio_player = AudioPlayer(self.current_music_file_path)
+            self.last_music_file_path = self.current_music_file_path
+
+        self.audio_player.play(start_at)
+
+    def eventFilter(self, source, event):
+        if (event.type() == QtCore.QEvent.MouseButtonDblClick and
+                event.buttons() == QtCore.Qt.LeftButton and
+                source is self.playlist.viewport()):
+            item = self.playlist.itemAt(event.pos())
+            if item is not None:
+                print('dblclick:', item.row(), item.column())
+        return super(MainWindow, self).eventFilter(source, event)
+
+    def _set_table_button(self, len_song_list):
+        add_idx = list(header_dict.keys()).index('added')
+        download_idx = list(header_dict.keys()).index('downloaded')
+        for i in range(len_song_list):
+            checkbox_add = QCheckBox()
+            self.playlist.setCellWidget(i, add_idx, checkbox_add)
+
+            checkbox_download = QCheckBox()
+            self.playlist.setCellWidget(i, download_idx, checkbox_download)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -130,13 +181,16 @@ class TextEditThread(BaseQThread):
 
 
 class SearchThread(QThread):
+    trigger = pyqtSignal(int)
+
     def __init__(self, main_window):
-        super(QThread, self).__init__()
+        super().__init__()
         self.main_window = main_window
-        self.pool = futures.ThreadPoolExecutor(16)
+        self.pool = futures.ThreadPoolExecutor(1)
 
     def run(self):
         self.pool.submit(self.proc)
+        # self.proc()
 
     def proc(self):
         keyword = self.main_window.global_search.text()
@@ -170,8 +224,10 @@ class SearchThread(QThread):
             }
 
             for header in data:
-                self.main_window.playlist.setItem(i, header_list.index(header),
+                self.main_window.playlist.setItem(i, list(header_dict.keys()).index(header),
                                                   QTableWidgetItem(str(data[header])))
+
+        self.trigger.emit(len(self.main_window.song_list))
 
 
 class DownloadThread(QThread):

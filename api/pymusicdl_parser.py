@@ -5,7 +5,7 @@ import requests
 from music_dl import config
 from music_dl.source import MusicSource
 
-from log import log
+from utils.logger import log
 
 
 class MusicDL:
