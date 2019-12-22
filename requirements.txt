@@ -2,3 +2,5 @@ pymusic-dl
 setproctitle
 pydub
 pyaudio
+dataset
+pyyaml

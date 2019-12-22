@@ -4,10 +4,11 @@ import sys
 from PyQt5.QtWidgets import QApplication
 
 from gui.ctrl_panel_logic import MainWindow
+from utils.logger import log
 
 
 def grace_exit(signum, frame):
-    print('[EXIT] User exit')
+    log('[EXIT] User exit')
     sys.exit()
 
 

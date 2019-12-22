@@ -4,6 +4,11 @@ import logging
 import os
 from logging.handlers import TimedRotatingFileHandler
 
+import yaml
+
+cfg = yaml.safe_load(open('config.yml'))
+logs_dir = cfg['logs_dir']
+
 """
 %(name)s Logger的名字
 %(levelno)s 数字形式的日志级别
@@ -53,7 +58,7 @@ def log_init(log_path, module_name, verbose=False):
     return log
 
 
-log = log_init('logs/', 'polyplayer', True)
+log = log_init(logs_dir, 'polyplayer', True)
 
 if __name__ == '__main__':
     log_init('log/', 'test')

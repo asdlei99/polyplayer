@@ -49,6 +49,8 @@ class MusicDL:
         song.download_cover = types.MethodType(download_cover, song)  # replace method
         song.download()
 
+        return song.song_fullname
+
 
 def download_song(self):
     if self.song_url:

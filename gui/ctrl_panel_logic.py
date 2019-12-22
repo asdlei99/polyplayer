@@ -1,13 +1,15 @@
-import types
 import cgitb
-import signal
-import sys
 import os
 import time
 import traceback
-from collections import OrderedDict
 from concurrent import futures
-from multiprocessing import Pool
+
+import dataset
+import yaml
+
+cfg = yaml.safe_load(open('config.yml'))
+
+os.environ['PATH'] = os.getenv('PATH') + os.path.abspath(cfg['third_party_bin'])
 
 from PyQt5.QtGui import QCursor
 
@@ -30,6 +32,10 @@ from gui.ctrl_panel import Ui_MainWindow
 from api.pymusicdl_parser import MusicDL
 from api.audio_player import AudioPlayer
 from utils.logger import log
+from utils.db import DB
+
+db_thread = DB(cfg['db'])
+db_thread.connect()
 
 header_dict = {
     'added': 36,
@@ -62,7 +68,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowIcon(icon)
 
         # ready music download engine
-        self.mdl = MusicDL()
+        self.mdl = MusicDL(cfg['download_dir'])
         self.song_list = []
 
         # set table width
@@ -85,33 +91,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # download button thread
         self.download_thread = DownloadThread(self)
         self.download_thread.start()
-        self.download_button_thread = ButtonThread(self.pushButton_download,
-                                                   self.download_thread.run)
-        self.download_button_thread.start()
 
         # set audio player
         self.current_music_file_path = None
         self.last_music_file_path = None
         self.audio_player = None
         self.is_playing = False
-        self.pushButton_play.clicked.connect(self.play)
-
-    def play(self, start_at=0):
-        if self.current_music_file_path != self.last_music_file_path:
-            if isinstance(self.audio_player, AudioPlayer):
-                self.audio_player.stop()
-                self.audio_player = None
-            else:
-                self.audio_player = None
-        else:
-            self.audio_player.pause()
-            return
-
-        if self.audio_player is None:
-            self.audio_player = AudioPlayer(self.current_music_file_path)
-            self.last_music_file_path = self.current_music_file_path
-
-        self.audio_player.play(start_at)
+        self.player_thread = PlayerThread(self)
+        self.player_thread.start()
 
     def eventFilter(self, source, event):
         if (event.type() == QtCore.QEvent.MouseButtonDblClick and
@@ -211,8 +198,6 @@ class SearchThread(QThread):
 
         # fill cells
         for i, song in enumerate(self.main_window.song_list):
-            # TODO: add widget on table
-
             # data display
             data = {
                 'title': song.title,
@@ -230,6 +215,44 @@ class SearchThread(QThread):
         self.trigger.emit(len(self.main_window.song_list))
 
 
+class PlayerThread(QThread):
+    trigger = pyqtSignal(int)
+
+    def __init__(self, main_window):
+        super().__init__()
+        self.main_window = main_window
+        self.pool = futures.ThreadPoolExecutor(1)
+        self.start_at = 0
+
+    def run(self):
+        self.main_window.pushButton_play.clicked.connect(self.proc)
+
+    def proc(self):
+        self.pool.submit(self.play)
+        # self.proc()
+
+    def play(self):
+        if self.main_window.current_music_file_path is not None:
+            if self.main_window.current_music_file_path != self.main_window.last_music_file_path:
+                if isinstance(self.main_window.audio_player, AudioPlayer):
+                    self.main_window.audio_player.stop()
+                    self.main_window.audio_player = None
+                else:
+                    self.main_window.audio_player = None
+            else:
+                self.main_window.audio_player.pause()
+                return
+        else:
+            # TODO: if any song in playlist, play the first one
+            return
+
+        if self.main_window.audio_player is None:
+            self.main_window.audio_player = AudioPlayer(self.main_window.current_music_file_path)
+            self.main_window.last_music_file_path = self.main_window.current_music_file_path
+
+        self.main_window.audio_player.play(self.start_at)
+
+
 class DownloadThread(QThread):
     def __init__(self, main_window):
         super(QThread, self).__init__()
@@ -237,13 +260,43 @@ class DownloadThread(QThread):
         self.pool = futures.ThreadPoolExecutor(os.cpu_count())
 
     def run(self):
+        self.main_window.pushButton_download.clicked.connect(self.download)
+
+    def download(self):
+        self.pool.submit(self.proc)
+
+    def proc(self):
         current_row = self.main_window.playlist.currentRow()
         if current_row < 0:
             return
 
         if current_row < len(self.main_window.song_list):
-            self.pool.submit(self.main_window.mdl.download,
-                             self.main_window.song_list[current_row])
+            song = self.main_window.song_list[current_row]
+            data = dict(
+                title=song.title,
+                artist=song.singer,
+                album=song.album,
+                duration=song.duration,
+                filesize=song.size,
+                source=song.source,
+            )
+
+            # check exists
+            result = db_thread.find_one(
+                'cache',
+                title=song.title,
+                artist=song.singer,
+                album=song.album,
+                duration=song.duration,
+            )
+            if result is not None:
+                log.info('requested download denied, target song exists.')
+                return
+
+            music_filepath = self.main_window.mdl.download(song)
+
+            # record cached/downloaded song to database
+            db_thread.insert('cache', **dict(data, filename=os.path.basename(music_filepath)))
 
 
 class DelayedExecutionTimer(QtCore.QObject):

@@ -1,9 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
 
-os.environ['PATH'] = os.getenv('PATH') + os.path.abspath('bin/')
-print(os.environ['PATH'])
-
 import pyaudio
 from pydub.utils import make_chunks
 

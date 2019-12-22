@@ -1,0 +1,5 @@
+db: polyplayer.db  # database filepath
+download_dir: downloads/  # download dir for music/lyrics/covers
+logs_dir: logs/  # logs dir
+third_party_bin: bin/  # third party bin like ffmpeg
+
